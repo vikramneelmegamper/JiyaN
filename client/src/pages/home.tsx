@@ -680,6 +680,8 @@ export default function Home() {
     setSession({ signedIn: false, name: "", email: "" });
   };
 
+  const [activeTab, setActiveTab] = useState("today");
+
   const [autoTheme, setAutoTheme] = useState(true);
   useAutoTheme(autoTheme);
 
@@ -796,28 +798,46 @@ export default function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-3">
               <div className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <AccentPill
-                    icon={<ListTodo className="h-4 w-4" strokeWidth={2.2} />}
-                    label="A tiny plan"
-                    hint="One list. No overwhelm."
-                    testId="pill-plan"
-                  />
-                  <AccentPill
-                    icon={<Focus className="h-4 w-4" strokeWidth={2.2} />}
-                    label="Focus blocks"
-                    hint="Pomodoro that feels gentle."
-                    testId="pill-focus"
-                  />
-                  <AccentPill
-                    icon={<Clock className="h-4 w-4" strokeWidth={2.2} />}
-                    label="Full-screen"
-                    hint="Big timer \u2022 calm screen."
-                    testId="pill-fullscreen"
-                  />
+                  <button 
+                    onClick={() => setActiveTab("today")}
+                    className="text-left transition-transform active:scale-95 cursor-pointer"
+                    data-testid="button-pill-plan"
+                  >
+                    <AccentPill
+                      icon={<ListTodo className="h-4 w-4" strokeWidth={2.2} />}
+                      label="A tiny plan"
+                      hint="One list. No overwhelm."
+                      testId="pill-plan"
+                    />
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab("focus")}
+                    className="text-left transition-transform active:scale-95 cursor-pointer"
+                    data-testid="button-pill-focus"
+                  >
+                    <AccentPill
+                      icon={<Focus className="h-4 w-4" strokeWidth={2.2} />}
+                      label="Focus blocks"
+                      hint="Pomodoro that feels gentle."
+                      testId="pill-focus"
+                    />
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab("timer")}
+                    className="text-left transition-transform active:scale-95 cursor-pointer"
+                    data-testid="button-pill-fullscreen"
+                  >
+                    <AccentPill
+                      icon={<Clock className="h-4 w-4" strokeWidth={2.2} />}
+                      label="Full-screen"
+                      hint="Big timer \u2022 calm screen."
+                      testId="pill-fullscreen"
+                    />
+                  </button>
                 </div>
 
                 <Card className="glass rounded-3xl p-5 shadow-soft" data-testid="card-main">
-                  <Tabs defaultValue="today" data-testid="tabs-main">
+                  <Tabs value={activeTab} onValueChange={setActiveTab} data-testid="tabs-main">
                     <TabsList className="rounded-2xl" data-testid="tabs-list">
                       <TabsTrigger value="today" className="rounded-xl" data-testid="tab-today">
                         Today
