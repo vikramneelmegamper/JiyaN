@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { GoogleLogin, googleLogout, useGoogleLogin } from "@react-oauth/google";
 
 type LocalTask = {
   id: string;
@@ -32,6 +33,7 @@ type Session = {
   signedIn: boolean;
   name: string;
   email: string;
+  picture?: string;
 };
 
 function pad2(n: number) {
@@ -210,10 +212,12 @@ function AccentPill({
 
 function SignInCard({
   session,
-  onToggle,
+  onLoginSuccess,
+  onLogout,
 }: {
   session: Session;
-  onToggle: () => void;
+  onLoginSuccess: (response: any) => void;
+  onLogout: () => void;
 }) {
   return (
     <Card className="glass rounded-3xl p-5 shadow-soft" data-testid="card-auth">
@@ -226,27 +230,32 @@ function SignInCard({
             <div className="text-sm font-semibold text-foreground">Account</div>
           </div>
           <div className="mt-2 text-sm text-muted-foreground text-balance">
-            In this prototype, sign-in is a beautiful preview. Real Google sign-in and
-            account-connected data needs a backend.
+            {session.signedIn 
+              ? "You're connected with Google. Your dashboard is now yours."
+              : "Sign in with Google to personalize your experience and sync your space."}
           </div>
         </div>
 
-        <Button
-          variant={session.signedIn ? "secondary" : "default"}
-          className="rounded-2xl"
-          onClick={onToggle}
-          data-testid={session.signedIn ? "button-signout" : "button-signin"}
-        >
-          {session.signedIn ? (
-            <>
-              <LogOut className="mr-2 h-4 w-4" /> Sign out
-            </>
-          ) : (
-            <>
-              <LogIn className="mr-2 h-4 w-4" /> Sign in with Google
-            </>
-          )}
-        </Button>
+        {session.signedIn ? (
+          <Button
+            variant="secondary"
+            className="rounded-2xl"
+            onClick={onLogout}
+            data-testid="button-signout"
+          >
+            <LogOut className="mr-2 h-4 w-4" /> Sign out
+          </Button>
+        ) : (
+          <div data-testid="google-login-container">
+            <GoogleLogin
+              onSuccess={onLoginSuccess}
+              onError={() => console.log('Login Failed')}
+              useOneTap
+              theme="outline"
+              shape="pill"
+            />
+          </div>
+        )}
       </div>
 
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -256,7 +265,7 @@ function SignInCard({
         >
           <div className="text-xs text-muted-foreground">Status</div>
           <div className="mt-1 text-sm font-semibold">
-            {session.signedIn ? "Signed in" : "Not signed in"}
+            {session.signedIn ? "Connected" : "Guest Mode"}
           </div>
         </div>
         <div
@@ -264,14 +273,17 @@ function SignInCard({
           data-testid="panel-auth-identity"
         >
           <div className="text-xs text-muted-foreground">Identity</div>
-          <div className="mt-1 text-sm font-semibold truncate" data-testid="text-user">
+          <div className="mt-1 text-sm font-semibold truncate flex items-center gap-2" data-testid="text-user">
+            {session.signedIn && session.picture && (
+              <img src={session.picture} alt="" className="h-5 w-5 rounded-full" />
+            )}
             {session.signedIn ? session.name : "\u2014"}
           </div>
           <div
             className="text-xs text-muted-foreground truncate"
             data-testid="text-email"
           >
-            {session.signedIn ? session.email : "\u2014"}
+            {session.signedIn ? session.email : "Sign in to sync"}
           </div>
         </div>
       </div>
@@ -643,9 +655,30 @@ function FullscreenTimerCard() {
 export default function Home() {
   const [session, setSession] = useState<Session>({
     signedIn: false,
-    name: "Ava",
-    email: "ava@example.com",
+    name: "",
+    email: "",
   });
+
+  const handleLoginSuccess = (credentialResponse: any) => {
+    // In a real app, you'd verify this JWT on the backend
+    // For this frontend-only request, we'll decode enough to show UI
+    try {
+      const payload = JSON.parse(atob(credentialResponse.credential.split('.')[1]));
+      setSession({
+        signedIn: true,
+        name: payload.name,
+        email: payload.email,
+        picture: payload.picture
+      });
+    } catch (e) {
+      console.error("Failed to decode Google token", e);
+    }
+  };
+
+  const handleLogout = () => {
+    googleLogout();
+    setSession({ signedIn: false, name: "", email: "" });
+  };
 
   const [autoTheme, setAutoTheme] = useState(true);
   useAutoTheme(autoTheme);
@@ -750,12 +783,9 @@ export default function Home() {
                 <Button
                   variant={signedIn ? "secondary" : "default"}
                   className="rounded-2xl"
-                  onClick={() =>
-                    setSession((s) => ({
-                      ...s,
-                      signedIn: !s.signedIn,
-                    }))
-                  }
+                  onClick={() => {
+                    if (signedIn) handleLogout();
+                  }}
                   data-testid={signedIn ? "button-header-signout" : "button-header-signin"}
                 >
                   {signedIn ? "Sign out" : "Sign in"}
@@ -824,7 +854,8 @@ export default function Home() {
               <div className="space-y-3">
                 <SignInCard
                   session={session}
-                  onToggle={() => setSession((s) => ({ ...s, signedIn: !s.signedIn }))}
+                  onLoginSuccess={handleLoginSuccess}
+                  onLogout={handleLogout}
                 />
 
                 <Card className="glass rounded-3xl p-5 shadow-soft" data-testid="card-notion">
