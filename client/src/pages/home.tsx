@@ -135,14 +135,14 @@ function useFullscreenTimer(initialSeconds: number) {
       const now = Date.now();
       const last = lastTickRef.current ?? now;
       lastTickRef.current = now;
-      const delta = Math.max(0, Math.floor((now - last) / 1000));
+      const delta = (now - last) / 1000;
       if (delta <= 0) return;
 
       setSeconds((prev) => {
         const next = prev - delta;
         return next <= 0 ? 0 : next;
       });
-    }, 250);
+    }, 100);
     return () => window.clearInterval(id);
   }, [running]);
 
@@ -596,16 +596,16 @@ function FullscreenTimerCard() {
                 </div>
               </div>
 
-              <div className="flex-1 flex items-center justify-center">
+              <div className="flex-1 flex flex-col items-center justify-center gap-12 sm:gap-16">
                 <div className="text-center">
                   <div
-                    className="font-serif tracking-tight text-[min(18vw,160px)] leading-none mono-tabular"
+                    className="font-serif tracking-tight text-[min(22vw,240px)] leading-none mono-tabular tabular-nums"
                     data-testid="text-fullscreen-time"
                   >
                     {formatHMS(timer.seconds)}
                   </div>
                   <div
-                    className="mt-4 text-sm text-muted-foreground"
+                    className="mt-8 text-lg sm:text-xl text-muted-foreground font-light tracking-wide italic"
                     data-testid="text-fullscreen-sub"
                   >
                     Breathe. One thing at a time.
