@@ -800,7 +800,10 @@ export default function Home() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <button 
                     onClick={() => setActiveTab("today")}
-                    className="text-left transition-transform active:scale-95 cursor-pointer"
+                    className={cn(
+                      "text-left transition-all duration-300 active:scale-95 cursor-pointer rounded-2xl",
+                      activeTab === "today" ? "ring-2 ring-primary ring-offset-2 ring-offset-background shadow-lg scale-[1.02]" : "opacity-80 hover:opacity-100"
+                    )}
                     data-testid="button-pill-plan"
                   >
                     <AccentPill
@@ -812,7 +815,10 @@ export default function Home() {
                   </button>
                   <button 
                     onClick={() => setActiveTab("focus")}
-                    className="text-left transition-transform active:scale-95 cursor-pointer"
+                    className={cn(
+                      "text-left transition-all duration-300 active:scale-95 cursor-pointer rounded-2xl",
+                      activeTab === "focus" ? "ring-2 ring-primary ring-offset-2 ring-offset-background shadow-lg scale-[1.02]" : "opacity-80 hover:opacity-100"
+                    )}
                     data-testid="button-pill-focus"
                   >
                     <AccentPill
@@ -824,7 +830,10 @@ export default function Home() {
                   </button>
                   <button 
                     onClick={() => setActiveTab("timer")}
-                    className="text-left transition-transform active:scale-95 cursor-pointer"
+                    className={cn(
+                      "text-left transition-all duration-300 active:scale-95 cursor-pointer rounded-2xl",
+                      activeTab === "timer" ? "ring-2 ring-primary ring-offset-2 ring-offset-background shadow-lg scale-[1.02]" : "opacity-80 hover:opacity-100"
+                    )}
                     data-testid="button-pill-fullscreen"
                   >
                     <AccentPill
@@ -838,19 +847,7 @@ export default function Home() {
 
                 <Card className="glass rounded-3xl p-5 shadow-soft" data-testid="card-main">
                   <Tabs value={activeTab} onValueChange={setActiveTab} data-testid="tabs-main">
-                    <TabsList className="rounded-2xl" data-testid="tabs-list">
-                      <TabsTrigger value="today" className="rounded-xl" data-testid="tab-today">
-                        Today
-                      </TabsTrigger>
-                      <TabsTrigger value="focus" className="rounded-xl" data-testid="tab-focus">
-                        Focus
-                      </TabsTrigger>
-                      <TabsTrigger value="timer" className="rounded-xl" data-testid="tab-timer">
-                        Timer
-                      </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="today" className="mt-4" data-testid="panel-today">
+                    <TabsContent value="today" className="mt-0" data-testid="panel-today">
                       <TasksCard
                         tasks={tasks}
                         onAdd={addTask}
@@ -860,11 +857,11 @@ export default function Home() {
                       />
                     </TabsContent>
 
-                    <TabsContent value="focus" className="mt-4" data-testid="panel-focus">
+                    <TabsContent value="focus" className="mt-0" data-testid="panel-focus">
                       <PomodoroCard />
                     </TabsContent>
 
-                    <TabsContent value="timer" className="mt-4" data-testid="panel-timer">
+                    <TabsContent value="timer" className="mt-0" data-testid="panel-timer">
                       <FullscreenTimerCard />
                     </TabsContent>
                   </Tabs>
