@@ -13,12 +13,19 @@ import {
   Plus,
   Sun,
   Timer,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  Edit2,
+  Repeat,
+  StickyNote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { GoogleLogin, googleLogout, useGoogleLogin } from "@react-oauth/google";
 
@@ -27,6 +34,9 @@ type LocalTask = {
   title: string;
   done: boolean;
   createdAt: number;
+  dueDate?: string;
+  isRecurring?: boolean;
+  notes?: string;
 };
 
 type Session = {
@@ -296,22 +306,40 @@ function TasksCard({
   onAdd,
   onToggle,
   onRemove,
+  onUpdate,
   disabled,
 }: {
   tasks: LocalTask[];
-  onAdd: (title: string) => void;
+  onAdd: (task: Omit<LocalTask, "id" | "createdAt" | "done">) => void;
   onToggle: (id: string) => void;
   onRemove: (id: string) => void;
+  onUpdate: (id: string, updates: Partial<LocalTask>) => void;
   disabled: boolean;
 }) {
   const [title, setTitle] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   const remaining = tasks.filter((t) => !t.done).length;
 
+  const handleAdd = () => {
+    const t = title.trim();
+    if (!t) return;
+    onAdd({ title: t, dueDate, isRecurring, notes });
+    setTitle("");
+    setDueDate("");
+    setIsRecurring(false);
+    setNotes("");
+  };
+
   return (
     <Card className="glass rounded-3xl p-5 shadow-soft" data-testid="card-todos">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="space-y-4">
+        <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="h-9 w-9 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
               <ListTodo className="h-4 w-4 text-primary" strokeWidth={2.2} />
@@ -325,42 +353,69 @@ function TasksCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="space-y-3 p-4 rounded-2xl bg-card/30 border border-border/40">
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder={disabled ? "Sign in to save" : "Add a task\u2026"}
+            placeholder={disabled ? "Sign in to save" : "What needs to be done?"}
             disabled={disabled}
-            className="h-10 rounded-2xl bg-card/50"
+            className="h-10 rounded-xl bg-card/50 border-none shadow-none focus-visible:ring-1 focus-visible:ring-primary/30"
             data-testid="input-new-task"
           />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 bg-card/50 px-3 py-1.5 rounded-xl border border-border/40">
+              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                disabled={disabled}
+                className="bg-transparent text-xs outline-none text-foreground"
+              />
+            </div>
+            <button
+              onClick={() => setIsRecurring(!isRecurring)}
+              disabled={disabled}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-xs",
+                isRecurring 
+                  ? "bg-primary/10 border-primary/30 text-primary" 
+                  : "bg-card/50 border-border/40 text-muted-foreground"
+              )}
+            >
+              <Repeat className="h-3.5 w-3.5" />
+              Recurring
+            </button>
+          </div>
+          <Textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Notes, links, or important points..."
+            disabled={disabled}
+            className="min-h-[80px] rounded-xl bg-card/50 border-none shadow-none focus-visible:ring-1 focus-visible:ring-primary/30 resize-none text-sm"
+          />
           <Button
-            className="rounded-2xl"
-            onClick={() => {
-              const t = title.trim();
-              if (!t) return;
-              onAdd(t);
-              setTitle("");
-            }}
+            className="w-full rounded-xl shadow-soft-sm"
+            onClick={handleAdd}
             disabled={disabled || title.trim().length === 0}
             data-testid="button-add-task"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="mr-2 h-4 w-4" /> Add Task
           </Button>
         </div>
       </div>
 
-      <div className="mt-4 space-y-2" data-testid="list-tasks">
+      <div className="mt-6 space-y-3" data-testid="list-tasks">
         <AnimatePresence initial={false}>
           {tasks.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
-              className="rounded-2xl border border-border/60 bg-card/40 px-4 py-3 text-sm text-muted-foreground"
+              className="rounded-2xl border border-border/60 bg-card/40 px-4 py-3 text-sm text-muted-foreground text-center"
               data-testid="empty-tasks"
             >
-              Add your first tiny task. Keep it soft.
+              Your space is clear. Take a deep breath.
             </motion.div>
           ) : (
             tasks.map((t) => (
@@ -369,52 +424,139 @@ function TasksCard({
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.18 }}
-                className="rounded-2xl border border-border/60 bg-card/40 px-3 py-2 flex items-center justify-between gap-3"
+                transition={{ duration: 0.2 }}
+                className={cn(
+                  "rounded-2xl border border-border/60 bg-card/40 overflow-hidden transition-all duration-300",
+                  expandedId === t.id ? "ring-1 ring-primary/20 shadow-md bg-card/60" : "hover:bg-card/50"
+                )}
                 data-testid={`row-task-${t.id}`}
               >
-                <button
-                  className={cn(
-                    "flex items-center gap-3 text-left min-w-0",
-                    disabled && "opacity-50 cursor-not-allowed",
-                  )}
-                  onClick={() => !disabled && onToggle(t.id)}
-                  disabled={disabled}
-                  data-testid={`button-toggle-task-${t.id}`}
-                >
-                  <span
-                    className={cn(
-                      "h-8 w-8 rounded-xl border flex items-center justify-center",
-                      t.done
-                        ? "bg-primary text-primary-foreground border-primary/40"
-                        : "bg-card/60 border-border/60",
-                    )}
-                  >
-                    {t.done ? <Check className="h-4 w-4" /> : null}
-                  </span>
-                  <span
-                    className={cn(
-                      "truncate text-sm",
-                      t.done
-                        ? "line-through text-muted-foreground"
-                        : "text-foreground",
-                    )}
-                    data-testid={`text-task-title-${t.id}`}
-                  >
-                    {t.title}
-                  </span>
-                </button>
+                <div className="p-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <button
+                      className={cn(
+                        "h-6 w-6 rounded-lg border flex items-center justify-center transition-colors shrink-0",
+                        t.done
+                          ? "bg-primary text-primary-foreground border-primary/40"
+                          : "bg-card/60 border-border/60"
+                      )}
+                      onClick={() => !disabled && onToggle(t.id)}
+                      disabled={disabled}
+                    >
+                      {t.done ? <Check className="h-3 w-3" /> : null}
+                    </button>
+                    
+                    <div className="flex-1 min-w-0 flex flex-col">
+                      {editingId === t.id ? (
+                        <input
+                          autoFocus
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={() => {
+                            if (editValue.trim()) onUpdate(t.id, { title: editValue });
+                            setEditingId(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              if (editValue.trim()) onUpdate(t.id, { title: editValue });
+                              setEditingId(null);
+                            }
+                          }}
+                          className="bg-transparent text-sm font-medium outline-none border-b border-primary/30 w-full"
+                        />
+                      ) : (
+                        <span
+                          className={cn(
+                            "truncate text-sm font-medium cursor-pointer",
+                            t.done ? "line-through text-muted-foreground" : "text-foreground"
+                          )}
+                          onClick={() => setExpandedId(expandedId === t.id ? null : t.id)}
+                        >
+                          {t.title}
+                        </span>
+                      )}
+                      
+                      {t.dueDate && (
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <Calendar className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-[10px] text-muted-foreground">Due: {t.dueDate}</span>
+                          {t.isRecurring && <Repeat className="h-3 w-3 text-primary/60 ml-1" />}
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-xl"
-                  onClick={() => onRemove(t.id)}
-                  disabled={disabled}
-                  data-testid={`button-remove-task-${t.id}`}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
+                  <div className="flex items-center gap-1">
+                    {t.isRecurring && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-lg text-primary/60 hover:text-primary hover:bg-primary/10"
+                        onClick={() => onAdd({ ...t, done: false })}
+                        title="Repeat this task"
+                      >
+                        <Repeat className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-lg"
+                      onClick={() => {
+                        setEditingId(t.id);
+                        setEditValue(t.title);
+                      }}
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-lg hover:text-destructive"
+                      onClick={() => onRemove(t.id)}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <button
+                      onClick={() => setExpandedId(expandedId === t.id ? null : t.id)}
+                      className="h-8 w-8 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {expandedId === t.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <AnimatePresence>
+                  {expandedId === t.id && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="border-t border-border/40 bg-card/20"
+                    >
+                      <div className="p-4 space-y-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            <StickyNote className="h-3 w-3" />
+                            Notes & Details
+                          </div>
+                          <Textarea
+                            value={t.notes || ""}
+                            onChange={(e) => onUpdate(t.id, { notes: e.target.value })}
+                            placeholder="Add links, text, or important points..."
+                            className="min-h-[100px] text-xs bg-card/40 border-border/40 rounded-xl resize-none focus-visible:ring-primary/20"
+                          />
+                        </div>
+                        
+                        {t.notes && (
+                          <div className="p-3 rounded-xl bg-primary/5 border border-primary/10 text-[11px] leading-relaxed text-muted-foreground">
+                            Pro-tip: You can paste links directly into the notes section.
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             ))
           )}
@@ -659,6 +801,17 @@ export default function Home() {
     email: "",
   });
 
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formattedTime = useMemo(() => {
+    return currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+  }, [currentTime]);
+
   const handleLoginSuccess = (credentialResponse: any) => {
     // In a real app, you'd verify this JWT on the backend
     // For this frontend-only request, we'll decode enough to show UI
@@ -702,11 +855,11 @@ export default function Home() {
     });
   }, []);
 
-  function addTask(title: string) {
+  function addTask(taskData: Omit<LocalTask, "id" | "createdAt" | "done">) {
     setTasks((prev) => [
       {
         id: crypto.randomUUID(),
-        title,
+        ...taskData,
         done: false,
         createdAt: Date.now(),
       },
@@ -720,6 +873,10 @@ export default function Home() {
 
   function removeTask(id: string) {
     setTasks((prev) => prev.filter((t) => t.id !== id));
+  }
+
+  function updateTask(id: string, updates: Partial<LocalTask>) {
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
   }
 
   const signedIn = session.signedIn;
@@ -736,23 +893,32 @@ export default function Home() {
                     className="h-10 w-10 rounded-2xl bg-primary/15 border border-primary/25 shadow-soft-sm flex items-center justify-center"
                     data-testid="logo-mark"
                   >
-                    <span className="font-serif text-xl text-primary">R</span>
+                    <span className="font-serif text-xl text-primary">T</span>
                   </div>
                   <div>
                     <h1
                       className="font-serif tracking-tight text-3xl sm:text-4xl leading-none"
                       data-testid="text-title"
                     >
-                      Roseboard
+                      Your Space
                     </h1>
-                    <div className="mt-1 text-sm text-muted-foreground" data-testid="text-date">
-                      {dayLabel}
+                    <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground" data-testid="text-date">
+                      <span>{dayLabel}</span>
+                      <span>\u2022</span>
+                      <span className="font-medium text-primary/80">{formattedTime}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
+                <div
+                  className="hidden sm:flex items-center gap-2 rounded-2xl px-3 py-2 glass shadow-soft-sm mr-2"
+                  data-testid="chip-time"
+                >
+                  <Clock className="h-3.5 w-3.5 text-primary/70" />
+                  <span className="text-xs font-semibold mono-tabular">{formattedTime}</span>
+                </div>
                 <div
                   className="hidden sm:flex items-center gap-2 rounded-2xl px-3 py-2 glass shadow-soft-sm"
                   data-testid="chip-theme"
@@ -853,6 +1019,7 @@ export default function Home() {
                         onAdd={addTask}
                         onToggle={toggleTask}
                         onRemove={removeTask}
+                        onUpdate={updateTask}
                         disabled={!signedIn}
                       />
                     </TabsContent>
