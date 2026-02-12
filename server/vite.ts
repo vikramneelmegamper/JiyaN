@@ -31,8 +31,14 @@ export async function setupVite(server: Server, app: Express) {
 
   app.use(vite.middlewares);
 
+  // Skip Vite SSR for API routes - let Express handle them
   app.use("/{*path}", async (req, res, next) => {
     const url = req.originalUrl;
+
+    // Don't apply Vite SSR to API routes
+    if (url.startsWith("/api")) {
+      return next();
+    }
 
     try {
       const clientTemplate = path.resolve(
